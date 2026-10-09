@@ -1,14 +1,14 @@
 import type { ThemeMode } from '../hooks/useTheme'
 import { CURRENCY_SYMBOL } from '../lib/currency'
 import { CURRENCIES, type Currency } from '../types'
-import { AutoIcon, LogoutIcon, MoonIcon, SunIcon } from './icons'
+import { AutoIcon, MoonIcon, SunIcon, UserIcon } from './icons'
 
 interface Props {
   mainCurrency: Currency
   onCurrencyChange: (c: Currency) => void
   themeMode: ThemeMode
   onThemeCycle: () => void
-  onSignOut: () => void
+  onAccount: () => void
 }
 
 const THEME_LABEL: Record<ThemeMode, string> = {
@@ -17,11 +17,11 @@ const THEME_LABEL: Record<ThemeMode, string> = {
   dark: 'Тема: тёмная',
 }
 
-export function Header({ mainCurrency, onCurrencyChange, themeMode, onThemeCycle, onSignOut }: Props) {
+export function Header({ mainCurrency, onCurrencyChange, themeMode, onThemeCycle, onAccount }: Props) {
   return (
     <header className="header">
       <div className="logo">
-        <img src="/favicon.svg" alt="" width={32} height={32} />
+        <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={32} height={32} />
         <span>My Wish</span>
       </div>
       <div className="header__actions">
@@ -41,8 +41,8 @@ export function Header({ mainCurrency, onCurrencyChange, themeMode, onThemeCycle
         <button className="icon-btn" onClick={onThemeCycle} title={THEME_LABEL[themeMode]} aria-label={THEME_LABEL[themeMode]}>
           {themeMode === 'light' ? <SunIcon /> : themeMode === 'dark' ? <MoonIcon /> : <AutoIcon />}
         </button>
-        <button className="icon-btn" onClick={onSignOut} title="Выйти" aria-label="Выйти">
-          <LogoutIcon />
+        <button className="icon-btn" onClick={onAccount} title="Аккаунт" aria-label="Аккаунт">
+          <UserIcon />
         </button>
       </div>
     </header>

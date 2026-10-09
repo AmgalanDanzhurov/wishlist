@@ -10,5 +10,5 @@ export default function App() {
   if (session === undefined) return null
   if (session === null) return <LoginScreen />
 
-  return <Dashboard userId={session.user.id} themeMode={theme.mode} onThemeCycle={theme.cycle} />
+  return <Dashboard userId={session.user.id} email={session.user.email} themeMode={theme.mode} onThemeCycle={theme.cycle} />
 }

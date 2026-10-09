@@ -29,9 +29,14 @@ npm run dev                  # http://localhost:5173
 политики RLS пускают только к своим строкам. Накопления — сумма всех записей в `deposits`
 (покупка записывается отрицательной суммой со ссылкой на товар).
 
-## Деплой (Vercel)
+## Вход
 
-1. `npx vercel login`
-2. `npx vercel --prod` — при первом запуске CLI спросит настройки проекта (подходят значения по умолчанию).
-3. В настройках проекта на Vercel добавить переменные `VITE_SUPABASE_URL` и `VITE_SUPABASE_PUBLISHABLE_KEY`.
-4. В Supabase → Authentication → URL Configuration добавить адрес сайта на Vercel в Site URL и Redirect URLs.
+Почта + пароль (Supabase Auth). Чтобы письма не требовались, в Supabase → Authentication → Sign In / Providers → Email
+выключен **Confirm email**. После создания своего аккаунта там же можно выключить **Allow new users to sign up**.
+
+## Деплой (GitHub Pages)
+
+Сборка и публикация — `.github/workflows/deploy.yml`, запускается при каждом push в `main`.
+Один раз в репозитории: Settings → Pages → Source: **GitHub Actions**.
+Пути в сборке относительные (`base: './'` в `vite.config.ts`), поэтому сайт работает в подпапке `/<repo>/`.
+Публичные настройки Supabase для сборки лежат в `.env.production`.

@@ -1403,3 +1403,29 @@ button {
 .history__minus {
   color: var(--danger);
 }
+
+/* ---------- Вход и аккаунт ---------- */
+.login__tabs {
+  margin: 8px 0 16px;
+}
+
+.account__password {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.account__password .field .input + .input {
+  margin-top: 6px;
+}
+
+.account__ok {
+  margin: 0;
+  color: var(--success);
+  font-weight: 600;
+}
+
+.account__logout {
+  justify-content: flex-start;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}

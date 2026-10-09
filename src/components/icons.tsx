@@ -32,9 +32,10 @@ export const AutoIcon = () => (
   </svg>
 )
 
-export const LogoutIcon = () => (
+export const UserIcon = () => (
   <svg {...base}>
-    <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3" />
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 21a8 8 0 0 1 16 0" />
   </svg>
 )
 

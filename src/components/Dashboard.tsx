@@ -3,8 +3,8 @@ import type { ThemeMode } from '../hooks/useTheme'
 import { useRates } from '../hooks/useRates'
 import { useWishData } from '../hooks/useWishData'
 import { priceIn, sortItems, totalSavings } from '../lib/calc'
-import { supabase } from '../lib/supabase'
 import type { Item, SortKey } from '../types'
+import { AccountDialog } from './AccountDialog'
 import { BuyDialog } from './BuyDialog'
 import { CategoryManager } from './CategoryManager'
 import { DepositForm } from './DepositForm'
@@ -19,11 +19,13 @@ const DepositHistory = lazy(() => import('./DepositHistory').then((m) => ({ defa
 
 interface Props {
   userId: string
+  email: string | undefined
   themeMode: ThemeMode
   onThemeCycle: () => void
 }
 
-export function Dashboard({ userId, themeMode, onThemeCycle }: Props) {
+export function Dashboard({ userId, email, themeMode, onThemeCycle }: Props) {
+  const [showingAccount, setShowingAccount] = useState(false)
   const rates = useRates()
   const {
     data,
@@ -58,7 +60,7 @@ export function Dashboard({ userId, themeMode, onThemeCycle }: Props) {
       onCurrencyChange={setMainCurrency}
       themeMode={themeMode}
       onThemeCycle={onThemeCycle}
-      onSignOut={() => supabase.auth.signOut()}
+      onAccount={() => setShowingAccount(true)}
     />
   )
 
@@ -235,6 +237,8 @@ export function Dashboard({ userId, themeMode, onThemeCycle }: Props) {
           />
         </Suspense>
       )}
+
+      {showingAccount && <AccountDialog email={email} onClose={() => setShowingAccount(false)} />}
     </div>
   )
 }
