@@ -76,8 +76,11 @@ export function Dashboard({ userId, email, themeMode, onThemeCycle }: Props) {
   const { categories, items, deposits, mainCurrency } = data
   const savings = totalSavings(deposits, mainCurrency, rates.rates)
   const wanted = items.filter((i) => i.status === 'wanted')
-  const wishedTotal = wanted.reduce((sum, i) => sum + priceIn(i, mainCurrency, rates.rates), 0)
-  const affordableCount = wanted.filter((i) => priceIn(i, mainCurrency, rates.rates) <= savings).length
+  // плашка считает только желания выбранной категории (или все, если категория не выбрана)
+  const selectedCategory = categories.find((c) => c.id === categoryId) ?? null
+  const wantedInScope = selectedCategory ? wanted.filter((i) => i.category_id === selectedCategory.id) : wanted
+  const wishedTotal = wantedInScope.reduce((sum, i) => sum + priceIn(i, mainCurrency, rates.rates), 0)
+  const affordableCount = wantedInScope.filter((i) => priceIn(i, mainCurrency, rates.rates) <= savings).length
 
   const bought = items.filter((i) => i.status === 'bought')
 
@@ -122,7 +125,8 @@ export function Dashboard({ userId, email, themeMode, onThemeCycle }: Props) {
           savings={savings}
           wishedTotal={wishedTotal}
           affordableCount={affordableCount}
-          wantedCount={wanted.length}
+          wantedCount={wantedInScope.length}
+          categoryName={selectedCategory?.name ?? null}
           currency={mainCurrency}
           rates={rates}
           onDeposit={() => setDepositing(true)}

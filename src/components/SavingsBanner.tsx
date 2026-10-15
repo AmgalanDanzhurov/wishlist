@@ -9,25 +9,33 @@ interface Props {
   wantedCount: number
   currency: Currency
   rates: RatesState
+  /** Выбранная категория: суммы на плашке считаются только по ней. null — все желания. */
+  categoryName: string | null
   onDeposit: () => void
   onHistory: () => void
 }
 
 export function SavingsBanner(props: Props) {
-  const { savings, wishedTotal, affordableCount, wantedCount, currency, rates, onDeposit, onHistory } = props
+  const { savings, wishedTotal, affordableCount, wantedCount, currency, rates, categoryName, onDeposit, onHistory } = props
   const progress = wishedTotal > 0 ? Math.min(1, Math.max(0, savings / wishedTotal)) : 0
   const left = Math.max(0, wishedTotal - savings)
+  const scope = categoryName ? `категории «${categoryName}»` : 'всех желаний'
 
   return (
     <section className="banner" aria-label="Накопления">
       <div className="banner__main">
-        <div className="banner__label">Накоплено</div>
-        <div className="banner__amount">{formatMoney(savings, currency)}</div>
+        <div className="banner__label">
+          Осталось накопить
+          {categoryName && <span className="banner__scope">{categoryName}</span>}
+        </div>
+        <div className="banner__amount">{formatMoney(left, currency)}</div>
         <div className="progress" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}>
           <div className="progress__fill" style={{ width: `${progress * 100}%` }} />
         </div>
         <div className="banner__caption">
-          {Math.round(progress * 100)}% от суммы всех желаний
+          {wishedTotal > 0 && left === 0
+            ? `Накоплений хватает на все ${categoryName ? 'желания категории' : 'желания'} 🎉`
+            : `Собрано ${Math.round(progress * 100)}% от суммы ${scope}`}
         </div>
         <div className="banner__actions">
           <button className="banner__btn banner__btn--primary" onClick={onDeposit}>
@@ -42,12 +50,12 @@ export function SavingsBanner(props: Props) {
 
       <dl className="banner__stats">
         <div>
-          <dt>Всего желаний</dt>
-          <dd>{formatMoney(wishedTotal, currency)}</dd>
+          <dt>Накоплено</dt>
+          <dd>{formatMoney(savings, currency)}</dd>
         </div>
         <div>
-          <dt>Осталось накопить</dt>
-          <dd>{formatMoney(left, currency)}</dd>
+          <dt>{categoryName ? 'Желания категории' : 'Всего желаний'}</dt>
+          <dd>{formatMoney(wishedTotal, currency)}</dd>
         </div>
         <div>
           <dt>Можно купить сейчас</dt>
