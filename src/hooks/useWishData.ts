@@ -20,7 +20,7 @@ export type CategoryInput = Pick<Category, 'name' | 'color'>
 export type DepositInput = Pick<Deposit, 'amount' | 'currency' | 'note'> & { created_at?: string }
 
 // numeric из Postgres на всякий случай приводим к числу
-const toItem = (row: Item): Item => ({ ...row, price: Number(row.price) })
+const toItem = (row: Item): Item => ({ ...row, price: Number(row.price), position: Number(row.position) })
 const toDeposit = (row: Deposit): Deposit => ({ ...row, amount: Number(row.amount) })
 
 export function useWishData(userId: string) {
@@ -110,6 +110,19 @@ export function useWishData(userId: string) {
     const item = toItem(row)
     setData((d) => d && { ...d, items: id ? d.items.map((i) => (i.id === id ? item : i)) : [...d.items, item] })
   }, [])
+
+  /** Перетаскивание: сразу двигаем карточку на экране, потом сохраняем; при ошибке перечитываем с сервера. */
+  const moveItem = useCallback(
+    async (id: string, position: number) => {
+      setData((d) => d && { ...d, items: d.items.map((i) => (i.id === id ? { ...i, position } : i)) })
+      const { error } = await supabase.from('items').update({ position }).eq('id', id)
+      if (error) {
+        setError(error.message)
+        await reload()
+      }
+    },
+    [reload],
+  )
 
   const deleteItem = useCallback(async (id: string) => {
     const { error } = await supabase.from('items').delete().eq('id', id)
@@ -211,6 +224,7 @@ export function useWishData(userId: string) {
 
   return {
     data,
+    moveItem,
     markBought,
     restoreItem,
     addDeposit,

@@ -23,6 +23,7 @@ export const demoItems: Item[] = [
     target_date: '2026-12-31',
     status: 'wanted',
     bought_at: null,
+    position: 1,
     created_at: '2026-09-01T10:00:00Z',
   },
   {
@@ -37,6 +38,7 @@ export const demoItems: Item[] = [
     target_date: null,
     status: 'wanted',
     bought_at: null,
+    position: 2,
     created_at: '2026-09-10T10:00:00Z',
   },
   {
@@ -51,6 +53,7 @@ export const demoItems: Item[] = [
     target_date: '2027-03-01',
     status: 'wanted',
     bought_at: null,
+    position: 3,
     created_at: '2026-09-20T10:00:00Z',
   },
   {
@@ -65,6 +68,7 @@ export const demoItems: Item[] = [
     target_date: '2027-06-01',
     status: 'wanted',
     bought_at: null,
+    position: 4,
     created_at: '2026-10-01T10:00:00Z',
   },
   {
@@ -79,6 +83,7 @@ export const demoItems: Item[] = [
     target_date: null,
     status: 'wanted',
     bought_at: null,
+    position: 5,
     created_at: '2026-10-05T10:00:00Z',
   },
 ]

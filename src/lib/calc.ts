@@ -34,10 +34,23 @@ export function datePlan(item: Item, savings: number, main: Currency, rates: Rat
   return { overdue, months, perMonth: missing / months }
 }
 
+/**
+ * Новая позиция для карточки, перенесённой между соседями: середина между ними.
+ * У краёв списка — на единицу дальше крайнего соседа.
+ */
+export function positionBetween(before: Item | undefined, after: Item | undefined): number {
+  if (before && after) return (before.position + after.position) / 2
+  if (before) return before.position + 1
+  if (after) return after.position - 1
+  return 0
+}
+
 export function sortItems(items: Item[], key: SortKey, main: Currency, rates: Rates): Item[] {
   const sorted = [...items]
   const price = (i: Item) => priceIn(i, main, rates)
   switch (key) {
+    case 'manual':
+      return sorted.sort((a, b) => a.position - b.position)
     case 'priority':
       return sorted.sort((a, b) => a.priority - b.priority || price(a) - price(b))
     case 'price-asc':

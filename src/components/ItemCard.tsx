@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 import { datePlan, priceIn } from '../lib/calc'
 import { formatMoney, type Rates } from '../lib/currency'
 import type { Category, Currency, Item } from '../types'
@@ -13,13 +13,16 @@ interface Props {
   onEdit: () => void
   onBuy: () => void
   onRestore: () => void
+  /** ручка перетаскивания — передаётся только в режиме «Свой порядок» */
+  dragHandle?: ReactNode
 }
 
 const PRIORITY_LABEL = { 1: 'Высокий', 2: 'Средний', 3: 'Низкий' } as const
 
 const dateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })
 
-export function ItemCard({ item, category, savings, mainCurrency, rates, onEdit, onBuy, onRestore }: Props) {
+export function ItemCard(props: Props) {
+  const { item, category, savings, mainCurrency, rates, onEdit, onBuy, onRestore, dragHandle } = props
   // запоминаем, какой именно адрес не загрузился, чтобы после правки ссылки попробовать снова
   const [failedImage, setFailedImage] = useState<string | null>(null)
   const imageFailed = failedImage === item.image_url
@@ -49,6 +52,7 @@ export function ItemCard({ item, category, savings, mainCurrency, rates, onEdit,
             {PRIORITY_LABEL[item.priority]}
           </span>
         )}
+        {dragHandle}
         <button className="card__edit" onClick={onEdit} aria-label={`Редактировать ${item.title}`} title="Редактировать">
           <EditIcon />
         </button>

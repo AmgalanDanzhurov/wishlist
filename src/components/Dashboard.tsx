@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useState, type ReactNode } from 'react'
 import type { ThemeMode } from '../hooks/useTheme'
 import { useRates } from '../hooks/useRates'
 import { useWishData } from '../hooks/useWishData'
@@ -12,7 +12,33 @@ import { Header } from './Header'
 import { ItemCard } from './ItemCard'
 import { ItemForm } from './ItemForm'
 import { SavingsBanner } from './SavingsBanner'
+import { SortableGrid } from './SortableGrid'
 import { Toolbar } from './Toolbar'
+
+const SORT_KEY = 'mywish:sort'
+const SORT_KEYS: SortKey[] = ['manual', 'priority', 'price-asc', 'price-desc', 'target-date', 'newest']
+
+/** Выбранная сортировка запоминается на устройстве; по умолчанию — свой порядок. */
+function useStoredSort() {
+  const [sort, setSort] = useState<SortKey>(() => {
+    try {
+      const saved = localStorage.getItem(SORT_KEY) as SortKey | null
+      if (saved && SORT_KEYS.includes(saved)) return saved
+    } catch {
+      // хранилище недоступно
+    }
+    return 'manual'
+  })
+  const update = (s: SortKey) => {
+    setSort(s)
+    try {
+      localStorage.setItem(SORT_KEY, s)
+    } catch {
+      // ignore
+    }
+  }
+  return [sort, update] as const
+}
 
 // график тянет recharts — грузим его только когда открыли историю
 const DepositHistory = lazy(() => import('./DepositHistory').then((m) => ({ default: m.DepositHistory })))
@@ -39,6 +65,7 @@ export function Dashboard({ userId, email, themeMode, onThemeCycle }: Props) {
     addDeposit,
     deleteDeposit,
     markBought,
+    moveItem,
     restoreItem,
   } = useWishData(userId)
   const [view, setView] = useState<'wanted' | 'bought'>('wanted')
@@ -46,8 +73,8 @@ export function Dashboard({ userId, email, themeMode, onThemeCycle }: Props) {
   const [actionError, setActionError] = useState<string | null>(null)
   const [depositing, setDepositing] = useState(false)
   const [showingHistory, setShowingHistory] = useState(false)
-  const [categoryId, setCategoryId] = useState<string | null>(null)
-  const [sort, setSort] = useState<SortKey>('priority')
+  const [categoryIds, setCategoryIds] = useState<string[]>([])
+  const [sort, setSort] = useStoredSort()
   const [onlyAffordable, setOnlyAffordable] = useState(false)
   const [seeding, setSeeding] = useState(false)
   // null — форма закрыта, 'new' — новое желание, Item — редактирование
@@ -76,9 +103,13 @@ export function Dashboard({ userId, email, themeMode, onThemeCycle }: Props) {
   const { categories, items, deposits, mainCurrency } = data
   const savings = totalSavings(deposits, mainCurrency, rates.rates)
   const wanted = items.filter((i) => i.status === 'wanted')
-  // плашка считает только желания выбранной категории (или все, если категория не выбрана)
-  const selectedCategory = categories.find((c) => c.id === categoryId) ?? null
-  const wantedInScope = selectedCategory ? wanted.filter((i) => i.category_id === selectedCategory.id) : wanted
+  // выбранные категории (удалённые из выбора отбрасываем); пустой список — все желания
+  const selectedCategories = categories.filter((c) => categoryIds.includes(c.id))
+  const inSelectedCategories = (i: Item) =>
+    selectedCategories.length === 0 || selectedCategories.some((c) => c.id === i.category_id)
+
+  // плашка считает только желания выбранных категорий
+  const wantedInScope = wanted.filter(inSelectedCategories)
   const wishedTotal = wantedInScope.reduce((sum, i) => sum + priceIn(i, mainCurrency, rates.rates), 0)
   const affordableCount = wantedInScope.filter((i) => priceIn(i, mainCurrency, rates.rates) <= savings).length
 
@@ -86,13 +117,29 @@ export function Dashboard({ userId, email, themeMode, onThemeCycle }: Props) {
 
   const filtered = (view === 'wanted' ? wanted : bought).filter(
     (i) =>
-      (categoryId === null || i.category_id === categoryId) &&
+      inSelectedCategories(i) &&
       (view === 'bought' || !onlyAffordable || priceIn(i, mainCurrency, rates.rates) <= savings),
   )
   const visible =
     view === 'wanted'
       ? sortItems(filtered, sort, mainCurrency, rates.rates)
       : [...filtered].sort((a, b) => (b.bought_at ?? '').localeCompare(a.bought_at ?? ''))
+  const draggable = view === 'wanted' && sort === 'manual'
+
+  const renderCard = (item: Item, dragHandle?: ReactNode) => (
+    <ItemCard
+      key={item.id}
+      item={item}
+      category={categories.find((c) => c.id === item.category_id)}
+      savings={savings}
+      mainCurrency={mainCurrency}
+      rates={rates.rates}
+      onEdit={() => setEditing(item)}
+      onBuy={() => setBuying(item)}
+      onRestore={() => handleRestore(item)}
+      dragHandle={dragHandle}
+    />
+  )
 
   async function handleRestore(item: Item) {
     const deducted = deposits.some((d) => d.item_id === item.id && d.amount < 0)
@@ -126,7 +173,7 @@ export function Dashboard({ userId, email, themeMode, onThemeCycle }: Props) {
           wishedTotal={wishedTotal}
           affordableCount={affordableCount}
           wantedCount={wantedInScope.length}
-          categoryName={selectedCategory?.name ?? null}
+          categoryNames={selectedCategories.map((c) => c.name)}
           currency={mainCurrency}
           rates={rates}
           onDeposit={() => setDepositing(true)}
@@ -160,8 +207,8 @@ export function Dashboard({ userId, email, themeMode, onThemeCycle }: Props) {
             <Toolbar
               showAffordable={view === 'wanted'}
               categories={categories}
-              categoryId={categoryId}
-              onCategoryChange={setCategoryId}
+              categoryIds={categoryIds}
+              onCategoryIdsChange={setCategoryIds}
               sort={sort}
               onSortChange={setSort}
               onlyAffordable={onlyAffordable}
@@ -171,21 +218,11 @@ export function Dashboard({ userId, email, themeMode, onThemeCycle }: Props) {
             />
 
             {visible.length > 0 ? (
-              <div className="grid">
-                {visible.map((item) => (
-                  <ItemCard
-                    key={item.id}
-                    item={item}
-                    category={categories.find((c) => c.id === item.category_id)}
-                    savings={savings}
-                    mainCurrency={mainCurrency}
-                    rates={rates.rates}
-                    onEdit={() => setEditing(item)}
-                    onBuy={() => setBuying(item)}
-                    onRestore={() => handleRestore(item)}
-                  />
-                ))}
-              </div>
+              draggable ? (
+                <SortableGrid items={visible} renderCard={renderCard} onMove={moveItem} />
+              ) : (
+                <div className="grid">{visible.map((item) => renderCard(item))}</div>
+              )
             ) : (
               <p className="empty">
                 {view === 'bought' && bought.length === 0
@@ -216,7 +253,7 @@ export function Dashboard({ userId, email, themeMode, onThemeCycle }: Props) {
           onSave={saveCategory}
           onDelete={async (id) => {
             await deleteCategory(id)
-            if (categoryId === id) setCategoryId(null)
+            setCategoryIds((ids) => ids.filter((x) => x !== id))
           }}
           onClose={() => setManagingCategories(false)}
         />

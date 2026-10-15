@@ -4,8 +4,9 @@ import { PlusIcon, TagsIcon } from './icons'
 
 interface Props {
   categories: Category[]
-  categoryId: string | null
-  onCategoryChange: (id: string | null) => void
+  /** выбранные категории; пустой список — все */
+  categoryIds: string[]
+  onCategoryIdsChange: (ids: string[]) => void
   sort: SortKey
   onSortChange: (s: SortKey) => void
   onlyAffordable: boolean
@@ -16,6 +17,7 @@ interface Props {
 }
 
 const SORT_LABEL: Record<SortKey, string> = {
+  manual: 'Свой порядок',
   priority: 'По приоритету',
   'price-asc': 'Сначала дешёвые',
   'price-desc': 'Сначала дорогие',
@@ -26,8 +28,8 @@ const SORT_LABEL: Record<SortKey, string> = {
 export function Toolbar(props: Props) {
   const {
     categories,
-    categoryId,
-    onCategoryChange,
+    categoryIds,
+    onCategoryIdsChange,
     sort,
     onSortChange,
     onlyAffordable,
@@ -39,18 +41,22 @@ export function Toolbar(props: Props) {
 
   return (
     <div className="toolbar">
-      <div className="chips" role="tablist" aria-label="Категории">
-        <button role="tab" aria-selected={categoryId === null} className="chip" onClick={() => onCategoryChange(null)}>
+      {/* можно выбрать несколько категорий; «Все» сбрасывает выбор */}
+      <div className="chips" role="group" aria-label="Категории">
+        <button aria-pressed={categoryIds.length === 0} className="chip" onClick={() => onCategoryIdsChange([])}>
           Все
         </button>
         {categories.map((c) => (
           <button
             key={c.id}
-            role="tab"
-            aria-selected={categoryId === c.id}
+            aria-pressed={categoryIds.includes(c.id)}
             className="chip"
             style={{ '--chip': c.color } as CSSProperties}
-            onClick={() => onCategoryChange(c.id)}
+            onClick={() =>
+              onCategoryIdsChange(
+                categoryIds.includes(c.id) ? categoryIds.filter((id) => id !== c.id) : [...categoryIds, c.id],
+              )
+            }
           >
             <span className="chip__dot" />
             {c.name}

@@ -25,6 +25,8 @@ export interface Item {
   target_date: string | null
   status: ItemStatus
   bought_at: string | null
+  /** ручной порядок (перетаскивание); меньше — выше */
+  position: number
   created_at: string
 }
 
@@ -38,4 +40,4 @@ export interface Deposit {
   created_at: string
 }
 
-export type SortKey = 'priority' | 'price-asc' | 'price-desc' | 'target-date' | 'newest'
+export type SortKey = 'manual' | 'priority' | 'price-asc' | 'price-desc' | 'target-date' | 'newest'
