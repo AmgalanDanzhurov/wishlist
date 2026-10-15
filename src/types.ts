@@ -20,7 +20,8 @@ export interface Item {
   image_url: string | null
   price: number
   currency: Currency
-  category_id: string | null
+  /** категории товара (связующая таблица item_categories) */
+  category_ids: string[]
   priority: Priority
   target_date: string | null
   status: ItemStatus

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type CSSProperties, type FormEvent } from 'react'
 import type { ItemInput } from '../hooks/useWishData'
 import { CURRENCY_SYMBOL } from '../lib/currency'
 import { CURRENCIES, type Category, type Currency, type Item, type Priority } from '../types'
@@ -37,7 +37,7 @@ export function ItemForm({ item, categories, onSave, onDelete, onClose }: Props)
   const [imageUrl, setImageUrl] = useState(item?.image_url ?? '')
   const [price, setPrice] = useState(item ? String(item.price) : '')
   const [currency, setCurrency] = useState<Currency>(item?.currency ?? 'RUB')
-  const [categoryId, setCategoryId] = useState(item?.category_id ?? '')
+  const [categoryIds, setCategoryIds] = useState<string[]>(item?.category_ids ?? [])
   const [priority, setPriority] = useState<Priority>(item?.priority ?? 2)
   const [targetDate, setTargetDate] = useState(item?.target_date ?? '')
   const [busy, setBusy] = useState(false)
@@ -63,7 +63,7 @@ export function ItemForm({ item, categories, onSave, onDelete, onClose }: Props)
           image_url: preview,
           price: parsedPrice,
           currency,
-          category_id: categoryId || null,
+          category_ids: categoryIds,
           priority,
           target_date: targetDate || null,
         },
@@ -175,23 +175,36 @@ export function ItemForm({ item, categories, onSave, onDelete, onClose }: Props)
           </div>
         </div>
 
-        <div className="form__row">
-          <label className="field">
-            <span>Категория</span>
-            <select className="select select--full" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-              <option value="">Без категории</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            <span>Купить к дате</span>
-            <input className="input" type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
-          </label>
+        <div className="field">
+          <span>Категории {categories.length > 0 && <small className="muted">— можно выбрать несколько</small>}</span>
+          {categories.length > 0 ? (
+            <div className="chips chips--wrap" role="group" aria-label="Категории">
+              {categories.map((c) => {
+                const on = categoryIds.includes(c.id)
+                return (
+                  <button
+                    type="button"
+                    key={c.id}
+                    aria-pressed={on}
+                    className="chip"
+                    style={{ '--chip': c.color } as CSSProperties}
+                    onClick={() => setCategoryIds(on ? categoryIds.filter((id) => id !== c.id) : [...categoryIds, c.id])}
+                  >
+                    <span className="chip__dot" />
+                    {c.name}
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <small className="muted">Категорий пока нет — их можно создать кнопкой «Добавить категорию» над списком.</small>
+          )}
         </div>
+
+        <label className="field">
+          <span>Купить к дате</span>
+          <input className="input" type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
+        </label>
 
         <div className="field">
           <span>Приоритет</span>

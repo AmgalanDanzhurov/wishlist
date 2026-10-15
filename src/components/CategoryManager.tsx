@@ -120,7 +120,7 @@ export function CategoryManager({ categories, items, onSave, onDelete, onClose }
             <CategoryRow
               key={c.id}
               category={c}
-              count={items.filter((i) => i.category_id === c.id).length}
+              count={items.filter((i) => i.category_ids.includes(c.id)).length}
               onSave={onSave}
               onDelete={onDelete}
             />

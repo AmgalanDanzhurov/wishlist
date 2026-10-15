@@ -12,15 +12,46 @@ export interface WishData {
 
 export type ItemInput = Pick<
   Item,
-  'title' | 'url' | 'image_url' | 'price' | 'currency' | 'category_id' | 'priority' | 'target_date'
+  'title' | 'url' | 'image_url' | 'price' | 'currency' | 'category_ids' | 'priority' | 'target_date'
 >
 
 export type CategoryInput = Pick<Category, 'name' | 'color'>
 
 export type DepositInput = Pick<Deposit, 'amount' | 'currency' | 'note'> & { created_at?: string }
 
+// Товар вместе с его категориями из связующей таблицы — одним запросом
+const ITEM_SELECT = '*, item_categories(category_id)'
+
+type ItemRow = Omit<Item, 'category_ids'> & {
+  item_categories?: { category_id: string }[]
+}
+
 // numeric из Postgres на всякий случай приводим к числу
-const toItem = (row: Item): Item => ({ ...row, price: Number(row.price), position: Number(row.position) })
+const toItem = (row: ItemRow): Item => {
+  const { item_categories, ...rest } = row
+  return {
+    ...rest,
+    price: Number(row.price),
+    position: Number(row.position),
+    category_ids: (item_categories ?? []).map((c) => c.category_id),
+  }
+}
+
+/** Приводит связи товара с категориями к нужному списку: лишние удаляет, недостающие добавляет. */
+async function syncItemCategories(itemId: string, categoryIds: string[]) {
+  let del = supabase.from('item_categories').delete().eq('item_id', itemId)
+  if (categoryIds.length > 0) del = del.not('category_id', 'in', `(${categoryIds.join(',')})`)
+  const { error: delError } = await del
+  if (delError) throw delError
+  if (categoryIds.length === 0) return
+  const { error } = await supabase
+    .from('item_categories')
+    .upsert(
+      categoryIds.map((category_id) => ({ item_id: itemId, category_id })),
+      { onConflict: 'item_id,category_id', ignoreDuplicates: true },
+    )
+  if (error) throw error
+}
 const toDeposit = (row: Deposit): Deposit => ({ ...row, amount: Number(row.amount) })
 
 export function useWishData(userId: string) {
@@ -30,7 +61,7 @@ export function useWishData(userId: string) {
   const reload = useCallback(async () => {
     const [categories, items, deposits, settings] = await Promise.all([
       supabase.from('categories').select('*').order('created_at'),
-      supabase.from('items').select('*').order('created_at'),
+      supabase.from('items').select(ITEM_SELECT).order('created_at'),
       supabase.from('deposits').select('*').order('created_at'),
       supabase.from('settings').select('main_currency').maybeSingle(),
     ])
@@ -79,19 +110,31 @@ export function useWishData(userId: string) {
 
     const categoryIdByName = new Map(cats.map((c: Category) => [c.name, c.id]))
     const demoCategoryName = new Map(demoCategories.map((c) => [c.id, c.name]))
-    const { error: itemErr } = await supabase.from('items').insert(
-      demoItems.map(({ title, url, image_url, price, currency, category_id, priority, target_date }) => ({
-        title,
-        url,
-        image_url,
-        price,
-        currency,
-        priority,
-        target_date,
-        category_id: category_id ? categoryIdByName.get(demoCategoryName.get(category_id)!) : null,
+    const { data: inserted, error: itemErr } = await supabase
+      .from('items')
+      .insert(
+        demoItems.map(({ title, url, image_url, price, currency, priority, target_date }) => ({
+          title,
+          url,
+          image_url,
+          price,
+          currency,
+          priority,
+          target_date,
+        })),
+      )
+      .select('id')
+    if (itemErr) return setError(itemErr.message)
+
+    // INSERT ... RETURNING отдаёт строки в том же порядке, в каком их передали
+    const links = demoItems.flatMap((demo, index) =>
+      demo.category_ids.map((cid) => ({
+        item_id: inserted[index].id,
+        category_id: categoryIdByName.get(demoCategoryName.get(cid)!)!,
       })),
     )
-    if (itemErr) return setError(itemErr.message)
+    const { error: linkErr } = await supabase.from('item_categories').insert(links)
+    if (linkErr) return setError(linkErr.message)
 
     const { error: depErr } = await supabase
       .from('deposits')
@@ -104,10 +147,12 @@ export function useWishData(userId: string) {
   // Мутации ниже бросают ошибку — её показывает форма, из которой их вызвали.
 
   const saveItem = useCallback(async (input: ItemInput, id?: string) => {
-    const query = id ? supabase.from('items').update(input).eq('id', id) : supabase.from('items').insert(input)
-    const { data: row, error } = await query.select().single()
+    const { category_ids, ...fields } = input
+    const query = id ? supabase.from('items').update(fields).eq('id', id) : supabase.from('items').insert(fields)
+    const { data, error } = await query.select().single()
     if (error) throw error
-    const item = toItem(row)
+    await syncItemCategories(data.id, category_ids)
+    const item = { ...toItem(data), category_ids }
     setData((d) => d && { ...d, items: id ? d.items.map((i) => (i.id === id ? item : i)) : [...d.items, item] })
   }, [])
 
@@ -149,13 +194,13 @@ export function useWishData(userId: string) {
   const deleteCategory = useCallback(async (id: string) => {
     const { error } = await supabase.from('categories').delete().eq('id', id)
     if (error) throw error
-    // в базе category_id у товаров обнуляется сам (on delete set null)
+    // в базе связи товаров с категорией удаляются сами (on delete cascade)
     setData(
       (d) =>
         d && {
           ...d,
           categories: d.categories.filter((c) => c.id !== id),
-          items: d.items.map((i) => (i.category_id === id ? { ...i, category_id: null } : i)),
+          items: d.items.map((i) => ({ ...i, category_ids: i.category_ids.filter((c) => c !== id) })),
         },
     )
   }, [])
@@ -178,7 +223,7 @@ export function useWishData(userId: string) {
       .from('items')
       .update({ status: 'bought', bought_at: new Date().toISOString() })
       .eq('id', item.id)
-      .select()
+      .select(ITEM_SELECT)
       .single()
     if (error) throw error
     let deposit: Deposit | null = null
@@ -207,7 +252,7 @@ export function useWishData(userId: string) {
       .from('items')
       .update({ status: 'wanted', bought_at: null })
       .eq('id', item.id)
-      .select()
+      .select(ITEM_SELECT)
       .single()
     if (error) throw error
     const del = await supabase.from('deposits').delete().eq('item_id', item.id).lt('amount', 0)

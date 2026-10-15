@@ -6,7 +6,7 @@ import { CalendarIcon, CheckIcon, EditIcon, ExternalIcon, ImageIcon, UndoIcon } 
 
 interface Props {
   item: Item
-  category: Category | undefined
+  categories: Category[]
   savings: number
   mainCurrency: Currency
   rates: Rates
@@ -22,7 +22,7 @@ const PRIORITY_LABEL = { 1: 'Высокий', 2: 'Средний', 3: 'Низк�
 const dateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })
 
 export function ItemCard(props: Props) {
-  const { item, category, savings, mainCurrency, rates, onEdit, onBuy, onRestore, dragHandle } = props
+  const { item, categories, savings, mainCurrency, rates, onEdit, onBuy, onRestore, dragHandle } = props
   // запоминаем, какой именно адрес не загрузился, чтобы после правки ссылки попробовать снова
   const [failedImage, setFailedImage] = useState<string | null>(null)
   const imageFailed = failedImage === item.image_url
@@ -59,10 +59,14 @@ export function ItemCard(props: Props) {
       </div>
 
       <div className="card__body">
-        {category && (
-          <span className="tag" style={{ '--chip': category.color } as CSSProperties}>
-            {category.name}
-          </span>
+        {categories.length > 0 && (
+          <div className="tags">
+            {categories.map((c) => (
+              <span key={c.id} className="tag" style={{ '--chip': c.color } as CSSProperties}>
+                {c.name}
+              </span>
+            ))}
+          </div>
         )}
         <h3 className="card__title">{item.title}</h3>
 

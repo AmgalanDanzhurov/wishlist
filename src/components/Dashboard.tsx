@@ -106,7 +106,7 @@ export function Dashboard({ userId, email, themeMode, onThemeCycle }: Props) {
   // выбранные категории (удалённые из выбора отбрасываем); пустой список — все желания
   const selectedCategories = categories.filter((c) => categoryIds.includes(c.id))
   const inSelectedCategories = (i: Item) =>
-    selectedCategories.length === 0 || selectedCategories.some((c) => c.id === i.category_id)
+    selectedCategories.length === 0 || selectedCategories.some((c) => i.category_ids.includes(c.id))
 
   // плашка считает только желания выбранных категорий
   const wantedInScope = wanted.filter(inSelectedCategories)
@@ -130,7 +130,7 @@ export function Dashboard({ userId, email, themeMode, onThemeCycle }: Props) {
     <ItemCard
       key={item.id}
       item={item}
-      category={categories.find((c) => c.id === item.category_id)}
+      categories={categories.filter((c) => item.category_ids.includes(c.id))}
       savings={savings}
       mainCurrency={mainCurrency}
       rates={rates.rates}

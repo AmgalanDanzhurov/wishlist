@@ -1494,3 +1494,19 @@ button {
 .card__grip:active {
   cursor: grabbing;
 }
+
+/* ---------- Несколько категорий у товара ---------- */
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chips--wrap {
+  flex-wrap: wrap;
+  overflow: visible;
+}
+
+.field > span small {
+  font-weight: 500;
+}
